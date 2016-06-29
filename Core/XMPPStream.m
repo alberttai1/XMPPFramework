@@ -111,7 +111,8 @@ enum XMPPStreamConfig
     XMPPStreamStartTLSPolicy startTLSPolicy;
     BOOL skipStartSession;
     BOOL validatesResponses;
-	
+	BOOL preferIPv6;
+
 	id <XMPPSASLAuthentication> auth;
 	id <XMPPCustomBinding> customBinding;
 	NSDate *authenticationDate;
@@ -210,6 +211,7 @@ enum XMPPStreamConfig
 		
 		// Initialize socket
 		asyncSocket = [[GCDAsyncSocket alloc] initWithDelegate:self delegateQueue:xmppQueue];
+		asyncSocket.IPv4PreferredOverIPv6 = !preferIPv6;
 	}
 	return self;
 }
@@ -391,6 +393,30 @@ enum XMPPStreamConfig
 		block();
 	else
 		dispatch_async(xmppQueue, block);
+}
+
+- (void) setPreferIPv6:(BOOL)_preferIPv6 {
+    dispatch_block_t block = ^{
+        preferIPv6 = _preferIPv6;
+    };
+    
+    if (dispatch_get_specific(xmppQueueTag))
+        block();
+    else
+        dispatch_async(xmppQueue, block);
+}
+
+- (BOOL) preferIPv6 {
+    __block BOOL result;
+    dispatch_block_t block = ^{
+        result = preferIPv6;
+    };
+    
+    if (dispatch_get_specific(xmppQueueTag))
+        block();
+    else
+        dispatch_sync(xmppQueue, block);
+    return result;
 }
 
 - (XMPPJID *)myJID
@@ -1256,6 +1282,7 @@ enum XMPPStreamConfig
 		
 		// Initailize socket
 		asyncSocket = [[GCDAsyncSocket alloc] initWithDelegate:self delegateQueue:xmppQueue];
+		asyncSocket.IPv4PreferredOverIPv6 = !preferIPv6;
 		
 		NSError *connectErr = nil;
 		result = [asyncSocket connectToAddress:remoteAddr error:&connectErr];
